@@ -5,7 +5,7 @@ from nltk.stem import PorterStemmer
 from pathlib import Path
 from typing import List, Tuple
 
-from config import *
+from .config import *
 
 
 

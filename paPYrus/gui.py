@@ -3,8 +3,8 @@ from tkinter import ttk, filedialog, scrolledtext, messagebox
 import os
 from pathlib import Path
 
-from searcher import ScrollSearch
-from config import *
+from .searcher import ScrollSearch
+from .config import *
 
 class TextSearchGUI(tk.Tk):
     def __init__(self, *args, **kwargs):
@@ -154,6 +154,10 @@ class TextSearchGUI(tk.Tk):
             self.file_preview_text.insert("end", preview)
 
 
-if __name__ == "__main__":
+def main():
     app = TextSearchGUI()
     app.mainloop()
+
+if __name__ == "__main__":
+    main()
+
