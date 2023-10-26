@@ -1,0 +1,12 @@
+README.md
+setup.py
+paPYrus.egg-info/PKG-INFO
+paPYrus.egg-info/SOURCES.txt
+paPYrus.egg-info/dependency_links.txt
+paPYrus.egg-info/entry_points.txt
+paPYrus.egg-info/requires.txt
+paPYrus.egg-info/top_level.txt
+papyrus/__init__.py
+papyrus/config.py
+papyrus/gui.py
+papyrus/searcher.py

@@ -12,7 +12,6 @@ setup(
     license="LOL",
     url="https://github.com/akatrusiak/paPYrus",
     install_requires=[
-        "tkinter",  # add other dependencies if needed
         "nltk",
     ],
     entry_points={
