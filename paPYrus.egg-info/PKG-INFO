@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: paPYrus
-Version: 0.1.0
+Version: 0.2.0
 Summary: A text note searcher and viewer
 Home-page: https://github.com/akatrusiak/paPYrus
 Author: Alexander Katrusiak
@@ -24,7 +24,7 @@ Description: # PaPYrus
         
         Then:
         ```
-        pip install 
+        pip install git://github.com:akatrusiak/paPYrus.git#egg=paPYrus
         ```
         
 Platform: UNKNOWN

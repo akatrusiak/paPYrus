@@ -38,10 +38,6 @@ class TextSearchGUI(tk.Tk):
         self.text = tk.Text(self.search_frame, wrap="word")
         self.text.pack(fill="both", expand=True)
         
-        # Button to select directory
-        self.select_directory_button = ttk.Button(self.tree_frame, text="Select Directory", command=self.select_directory)
-        self.select_directory_button.pack()
-        
         # Text widget for file tree
         self.file_tree_text = tk.Text(self.tree_frame, wrap="none", state="disabled", cursor="arrow")
         self.file_tree_text.pack(fill="both", expand=True)
@@ -59,47 +55,115 @@ class TextSearchGUI(tk.Tk):
 
         #button for clicking to open files
         self.file_tree_text.tag_bind("file", "<Button-1>", self.on_file_click)
+        
+        # Frame for directory selection and exit button
+        self.directory_frame = ttk.Frame(self.tree_frame)
+        self.directory_frame.pack(fill="x")
+        
+        # Exit button
+        self.exit_button = ttk.Button(self.directory_frame, text="Exit", command=self.quit)
+        self.exit_button.pack(side="left")
+        
+        # Entry for manual directory input
+        self.directory_var = tk.StringVar()
+        self.directory_entry = tk.Entry(self.directory_frame, textvariable=self.directory_var, fg='grey')
+        self.directory_entry.insert(0, "change/to/this/directory")
+        self.directory_entry.bind("<FocusIn>", self.clear_placeholder)
+        self.directory_entry.pack(side="left", fill="x", expand=True)
 
+        
+        # Button to select directory
+        self.select_directory_button = ttk.Button(self.directory_frame, text="Select Directory", command=self.change_directory)
+        self.select_directory_button.pack()
+
+##### FILE TREE #####
 
     #Build file tree box
     def build_file_tree(self, directory):
         self.file_tree_text.config(state="normal")
         self.file_tree_text.delete(1.0, "end")
-        self.file_tree_text.insert("end", self.generate_file_tree(directory))
+        self.generate_file_tree(directory)
         self.file_tree_text.config(state="disabled")
 
-    #generate file tree text/ buttons
     def generate_file_tree(self, directory, prefix=""):
         tree_str = ""
+        line_num = 1
         for path in sorted(directory.iterdir()):
             if path.is_dir():
-                tree_str += prefix + "├── "
-                start = f"{prefix}1.0"
-                end = f"{prefix}end"
-                self.file_tree_text.insert("end", path.name + "\n", "dir")
+                dir_line = prefix + "├── " + path.name + "\n"
+                self.file_tree_text.insert("end", dir_line, "dir")
+                start = f"{line_num}.{len(prefix) + 4}"
+                end = f"{line_num}.{len(prefix) + 4 + len(path.name)}"
                 self.file_tree_text.tag_add("dir", start, end)
+                line_num += 1
                 if path in self.expanded_dirs:
-                    tree_str += self.generate_file_tree(path, prefix + "│   ")
+                    added_lines = self.generate_file_tree(path, prefix + "│   ")
+                    line_num += added_lines
             else:
-                tree_str += prefix + "├── " + path.name + "\n"
-        return tree_str
+                file_line = prefix + "├── " + path.name + "\n"
+                self.file_tree_text.insert("end", file_line, "file")
+                start = f"{line_num}.{len(prefix) + 4}"
+                end = f"{line_num}.{len(prefix) + 4 + len(path.name)}"
+                self.file_tree_text.tag_add("file", start, end)
+                line_num += 1
 
-    #actions on button clicks for file tree
+        return line_num - 1
+    
+    # code that executes after clicking a directory
     def on_dir_click(self, event):
         # Get the index of the text widget where the click occurred
         index = self.file_tree_text.index("@%d,%d" % (event.x, event.y))
         # Get the line of text at the click index
         line = self.file_tree_text.get("%s linestart" % index, "%s lineend" % index)
+        
         # Extract the directory name from the line of text
-        dir_name = line.strip("├── \n")
+        dir_name = line.split('├── ')[-1].strip()
+        if not dir_name:
+            # If the line is not a valid directory name, return early
+            #print("Clicked line is not a directory")
+            return
+        #print("Clicked on:", dir_name)
         # Construct the full path to the clicked directory
-        clicked_dir = self.current_directory / dir_name
+        clicked_dir = self.construct_full_path(dir_name, index)
+        #print("Full path:", clicked_dir)
         if clicked_dir.is_dir():
             if clicked_dir in self.expanded_dirs:
                 self.expanded_dirs.remove(clicked_dir)
             else:
                 self.expanded_dirs.add(clicked_dir)
             self.build_file_tree(self.current_directory)
+        #else:
+            #print("Clicked path is not a directory on the filesystem")
+
+    #reconstructs the path to a clicked on directory to allow nesting
+    def construct_full_path(self, dir_name, index):
+        constructed_path = Path(dir_name)
+        #print("Starting reconstruction with:", constructed_path)
+
+        line_num, col_num = map(int, index.split('.'))
+        indent_level = self.get_indent_level(self.file_tree_text.get(index + " linestart", index + " lineend"))
+        
+        while line_num > 0:
+            line_num -= 1
+            index = f"{line_num}.0"
+            line = self.file_tree_text.get(f"{index} linestart", f"{index} lineend")
+            line_indent_level = self.get_indent_level(line)
+            
+            if line_indent_level < indent_level:
+                parent_name = line.split('├── ')[-1].strip()
+                constructed_path = Path(parent_name) / constructed_path
+                #print("Parent dir updated to:", constructed_path)
+                indent_level = line_indent_level
+
+        full_path = self.current_directory / constructed_path
+        #print("Constructed full path:", full_path)
+        return full_path
+
+
+    #finds how far indendet a file or directory is so that it can be found
+    def get_indent_level(self, line):
+        return len(line) - len(line.lstrip('│   '))
+
 
     #actions for clicking a file in the file tree
     def on_file_click(self, event):
@@ -121,14 +185,25 @@ class TextSearchGUI(tk.Tk):
             print("Error:", str(e))
             tk.messagebox.showerror("Error", f"An error occurred: {str(e)}")
 
+    #empties the change directory text box as soon as clicked
+    def clear_placeholder(self, event):
+        if self.directory_entry.get() == "change/to/this/directory":
+            self.directory_entry.delete(0, "end")
+            self.directory_entry.config(fg='black')
 
-
-    def select_directory(self):
-        directory = filedialog.askdirectory(initialdir=self.current_directory)
+    #uses the change directory button to change to whatever directory was typed into the box
+    def change_directory(self):
+        directory = self.directory_var.get()
         if directory:
-            self.current_directory=Path(directory)
-            self.expanded_dirs = set()
-            self.bild_file_tree(self.current_directory)
+            path = Path(directory)
+            if path.exists() and path.is_dir():
+                self.current_directory = path
+                self.expanded_dirs = set()
+                self.build_file_tree(self.current_directory)
+            else:
+                messagebox.showerror("Error", "Directory not found or not a directory.")
+  
+  ### SEARCHING ###
   
     def perform_search(self, event):
         query = self.search_var.get()
