@@ -1,7 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, scrolledtext, messagebox
-import os
+import os,sys
 from pathlib import Path
+import platform
 
 from .searcher import ScrollSearch
 from .config import *
@@ -9,6 +10,21 @@ from .config import *
 class TextSearchGUI(tk.Tk):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+        # Get the directory where the script or module is located
+        if getattr(sys, 'frozen', False):
+            # The application is frozen (using a tool like PyInstaller)
+            app_path = Path(sys.executable).parent
+        else:
+            # The application is run from a script or an interactive Python shell
+            app_path = Path(__file__).parent
+        
+        # Determine the operating system to set the application icon
+        os_name = platform.system()
+        if os_name == "Windows":
+            self.iconbitmap(app_path / "utils" / "Papyrus_pngpng.ico")
+        elif os_name in ["Linux", "Darwin"]:  # Darwin is for macOS
+            self.iconphoto(True, tk.PhotoImage(file=app_path / "utils" / "Papyrus_pngpng.png"))
         
         self.title("paPYrus Text Search")
         self.geometry("800x600")
